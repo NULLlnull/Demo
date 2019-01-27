@@ -17,7 +17,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class Client extends Socket {
-    private static String SERVER_IP = "192.168.0.100";
+    private static String SERVER_IP = "192.168.0.104";
     private static final int SERVER_PORT = 8899;
     private DataInputStream dis;
     private FileOutputStream fos;
@@ -27,7 +27,7 @@ public class Client extends Socket {
 
     @SuppressLint("CommitPrefEdits")
     public Client(Context context, String IP) throws IOException {
-        super(SERVER_IP, SERVER_PORT);
+        super(IP, SERVER_PORT);
         SERVER_IP = IP;
         this.client = this;
         Log.i("Seccess", "成功连接到服务器");
@@ -96,7 +96,7 @@ public class Client extends Socket {
         long mFileSize;
     }
 
-    protected void receiveFile(Socket socket) {
+    private void receiveFile(Socket socket) {
         File dirs = new File(Environment.getExternalStorageDirectory().toString() + "/");
         if (!dirs.exists()) {
             dirs.mkdirs();
@@ -110,11 +110,16 @@ public class Client extends Socket {
                     socket.getInputStream()));
             fileNum = din.readInt();
             fileinfos = new mFileInfo[fileNum];
+            Set<String> names = new HashSet<>();
             for (int i = 0; i < fileNum; i++) {
                 fileinfos[i] = new mFileInfo();
-                fileinfos[i].mFileName = din.readUTF();
+                String name = din.readUTF();
+                names.add(name);
+                fileinfos[i].mFileName = name;
                 fileinfos[i].mFileSize = din.readLong();
             }
+            //1指的是数据类型，1是Photo
+            saveState(1, names);
             totalSize = din.readLong();
         } catch (IOException e) {
             e.printStackTrace();
@@ -161,7 +166,7 @@ public class Client extends Socket {
                         //代替上面那个move的作用
                         temp = new byte[8192];
 //                        System.arraycopy(temp, 0, buf, writeLen, leftLen);
-                        System.arraycopy(temp, 0, buf, bufferedLen - leftLen, bufferedLen);
+                        System.arraycopy(temp, writeLen, buf, writeLen, bufferedLen);
                         buf = temp;
                         break;
                     } else {
@@ -178,10 +183,10 @@ public class Client extends Socket {
                     //(int) (totalWriteLens * 100 / totalSize));
                 } // end while
                 fout.close();
-
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
+                Log.e("文件接收失败", e.toString());
                 Log.d("接收文件失败", "receive file Exception");
             }
         } // end for
