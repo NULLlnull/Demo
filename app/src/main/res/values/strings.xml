@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Demo</string>
+    <string name="ip_pc">172.168.2.95</string>
 </resources>

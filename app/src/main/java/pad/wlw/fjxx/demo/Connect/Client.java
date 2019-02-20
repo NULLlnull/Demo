@@ -141,7 +141,7 @@ public class Client extends Socket {
         byte buf[] = new byte[8192];
         byte temp[];  //缓存区部分内容    缓冲对应System.arraycopy
         for (int i = 0; i < fileNum; i++) {
-            writeLens = 0;
+            writeLens = 0;// 当前已经向单个文件中写入的字节总数
             try {
 //                FileOutputStream fout = new FileOutputStream(dirs
 //                        + fileinfos[i].mFileName);
@@ -153,8 +153,9 @@ public class Client extends Socket {
                     } else {
                         bufferedLen = din.read(buf);
                     }
-                    if (bufferedLen == -1)
+                    if (bufferedLen == -1) {
                         return;
+                    }
                     System.out.println("readlen" + bufferedLen);
                     // 如果已写入文件的字节数加上缓存区中的字节数已大于文件的大小，只写入缓存区的部分内容。
                     if (writeLens + bufferedLen >= fileinfos[i].mFileSize) {
@@ -166,7 +167,7 @@ public class Client extends Socket {
                         //代替上面那个move的作用
                         temp = new byte[8192];
 //                        System.arraycopy(temp, 0, buf, writeLen, leftLen);
-                        System.arraycopy(temp, writeLen, buf, writeLen, bufferedLen);
+                        System.arraycopy(buf, writeLen, temp, 0, leftLen);
                         buf = temp;
                         break;
                     } else {
