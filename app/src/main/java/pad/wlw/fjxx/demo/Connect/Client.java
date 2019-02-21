@@ -4,6 +4,8 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.telephony.mbms.FileInfo;
 import android.util.Log;
 
@@ -25,11 +27,15 @@ public class Client extends Socket {
     private SharedPreferences SP;
     private SharedPreferences.Editor editor;
 
+    private Handler handler = null;
+    private int fileType = -1;
+
     @SuppressLint("CommitPrefEdits")
-    public Client(Context context, String IP) throws IOException {
+    public Client(Context context, String IP, Handler handler) throws IOException {
         super(IP, SERVER_PORT);
         SERVER_IP = IP;
         this.client = this;
+        this.handler = handler;
         Log.i("Seccess", "成功连接到服务器");
         this.setKeepAlive(true);
         SP = context.getSharedPreferences("Save", Context.MODE_PRIVATE);
@@ -38,9 +44,10 @@ public class Client extends Socket {
     }
 
     @SuppressLint("CommitPrefEdits")
-    public Client(Context context) throws IOException {
+    public Client(Context context, Handler handler) throws IOException {
         super(SERVER_IP, SERVER_PORT);
         this.client = this;
+        this.handler = handler;
         Log.i("Seccess", "成功连接到服务器");
         this.setKeepAlive(true);
         SP = context.getSharedPreferences("Save", Context.MODE_PRIVATE);
@@ -48,47 +55,9 @@ public class Client extends Socket {
         save();
     }
 
-    private void save() {
+    public void save() {
 //        saveFile(1);
         receiveFile(client);
-    }
-
-    /**
-     * @param pathType
-     * @1 Photo
-     * @2 Movie
-     */
-    public void saveFile(int pathType) {
-        try {
-            dis = new DataInputStream(this.getInputStream());
-            String fileName = dis.readUTF();
-            File file = new File(Environment.getExternalStorageDirectory().toString() + "/" + fileName);
-//            @SuppressLint("SdCardPath") File file = new File("/sdcard/" + (pathType == 1 ? "Photo/" : "Movie/")
-//                    + fileName);
-            Log.i("文件目录", Environment.getExternalStorageDirectory().toString());
-            fos = new FileOutputStream(file);
-            byte[] bytes = new byte[1024];
-            int len = 0;
-            while ((len = dis.read(bytes, 0, bytes.length)) != -1) {
-                fos.write(bytes, 0, len);
-                fos.flush();
-            }
-            Set<String> fileSet = new HashSet<>();
-            fileSet.add(fileName);
-            saveState(pathType, fileSet);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (fos != null)
-                    fos.close();
-                if (dis != null)
-                    dis.close();
-                this.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     class mFileInfo {
@@ -108,18 +77,24 @@ public class Client extends Socket {
         try {
             din = new DataInputStream(new BufferedInputStream(
                     socket.getInputStream()));
+            fileType = din.readInt();
+            //如果接收的是网页内容，则停止接收文件
+            if (fileType == 3) {
+                String url = din.readUTF();
+                editor.putString("URL", url).commit();
+                saveState(fileType);
+                SendMsg(fileType);
+                return;
+            }
             fileNum = din.readInt();
             fileinfos = new mFileInfo[fileNum];
-            Set<String> names = new HashSet<>();
             for (int i = 0; i < fileNum; i++) {
                 fileinfos[i] = new mFileInfo();
-                String name = din.readUTF();
-                names.add(name);
-                fileinfos[i].mFileName = name;
+                fileinfos[i].mFileName = din.readUTF();
                 fileinfos[i].mFileSize = din.readLong();
             }
             //1指的是数据类型，1是Photo
-            saveState(1, names);
+            saveState(1);
             totalSize = din.readLong();
         } catch (IOException e) {
             e.printStackTrace();
@@ -163,40 +138,43 @@ public class Client extends Socket {
                         writeLen = bufferedLen - leftLen;
                         fout.write(buf, 0, writeLen); // 写入部分
                         totalWriteLens += writeLen;
-//                        move(buf, writeLen, leftLen);
-                        //代替上面那个move的作用
-                        temp = new byte[8192];
-//                        System.arraycopy(temp, 0, buf, writeLen, leftLen);
-                        System.arraycopy(buf, writeLen, temp, 0, leftLen);
-                        buf = temp;
+                        System.arraycopy(buf, writeLen, buf, 0, leftLen);
+//                        temp = new byte[8192];
+//                        System.arraycopy(buf, writeLen, temp, 0, leftLen);
+//                        buf = temp;
                         break;
                     } else {
                         fout.write(buf, 0, bufferedLen); // 全部写入
                         writeLens += bufferedLen;
                         totalWriteLens += bufferedLen;
                         if (totalWriteLens >= totalSize) {
-                            //mListener.report(GroupChatActivity.FAIL, null);
                             return;
                         }
                         leftLen = 0;
                     }
-                    //mListener.report(GroupChatActivity.PROGRESS,
                     //(int) (totalWriteLens * 100 / totalSize));
                 } // end while
                 fout.close();
+                SendMsg(fileType);
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
                 Log.e("文件接收失败", e.toString());
                 Log.d("接收文件失败", "receive file Exception");
             }
-        } // end for
-        //mListener.report(GroupChatActivity.FAIL, null);
+        }
     }
 
-    private void saveState(int pathType, Set<String> files) {
+    //保存已经接收的数据类型。
+    //如果程序意外关闭。则在开启的时候检查是否已经保存过文件。如果有，直接打开
+    private void saveState(int pathType) {
         editor.putInt("Type", pathType);
-        editor.putStringSet("Files", files);
         editor.commit();
+    }
+
+    private void SendMsg(int what) {
+        Message msg = new Message();
+        msg.what = what;
+        handler.handleMessage(msg);
     }
 }
