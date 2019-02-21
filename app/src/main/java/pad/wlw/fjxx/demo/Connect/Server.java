@@ -104,6 +104,7 @@ public class Server {
         Message msg = new Message();
         msg.what = fileType;
         handler.handleMessage(msg);
+        Log.i("Save successfully", "Type:" + fileType);
     }
 
     class mFileInfo {
