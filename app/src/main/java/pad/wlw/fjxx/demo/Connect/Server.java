@@ -151,6 +151,7 @@ public class Server {
                     return;
                 }
                 System.out.println("readlen" + bufferedLen);
+                Log.i("正在接收中：", String.valueOf(totalWriteLens / totalSize));
                 // 如果已写入文件的字节数加上缓存区中的字节数已大于文件的大小，只写入缓存区的部分内容。
                 if (writeLens + bufferedLen >= fileinfos[i].mFileSize) {
                     leftLen = (int) (writeLens + bufferedLen - fileinfos[i].mFileSize);
@@ -173,6 +174,7 @@ public class Server {
                     leftLen = 0;
                 }
             }
+            Log.i("文件接收完毕", "共接收了" + fileNum + "个文件");
             fout.close();
         }
     }
@@ -181,5 +183,6 @@ public class Server {
     private void Web(DataInputStream din) throws IOException {
         String url = din.readUTF();
         editor.putString("URL", url).commit();
+        Log.i("当前播放的网页是：", SP.getString("URL", "无"));
     }
 }
