@@ -2,34 +2,36 @@ package pad.wlw.fjxx.demo;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.location.Address;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import java.io.IOException;
-import java.util.Timer;
-import java.util.TimerTask;
-
 import pad.wlw.fjxx.demo.Connect.Client;
 import pad.wlw.fjxx.demo.Connect.Server;
 import pad.wlw.fjxx.demo.Util.SD_Permission;
+import pad.wlw.fjxx.demo.fragment.ImageFragment;
+import pad.wlw.fjxx.demo.fragment.MainFragment;
+import pad.wlw.fjxx.demo.fragment.VideoFragment;
+import pad.wlw.fjxx.demo.fragment.WebFragment;
+import pad.wlw.fjxx.demo1.R;
 
-public class MainActivity extends AppCompatActivity {
-    private Button btn_accept;
-    private EditText et_ip;
+public class MainActivity extends FragmentActivity {
     private TextView tv_IP;
     private Client client;
-
 //    private Timer timer;
 //    private TimerTask timerTask;
 
@@ -43,24 +45,45 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void handleMessage(Message msg) {
             Log.i("收到消息", String.valueOf(msg.what));
+            FragmentTransaction transaction=getSupportFragmentManager().beginTransaction();
+            Fragment fragment=null;
             switch (msg.what) {
                 case 1:
+                    Log.i("Handler","1图片");
+                    fragment=new ImageFragment();
                     break;
                 case 2:
+                    Log.i("Handler","2视频");
+                   fragment=new VideoFragment();
                     break;
                 case 3:
+                    Log.i("Handler","3web");
+                    fragment=new WebFragment();
+                    break;
+                case 4:
+                    Log.i("Handler","4main");
+                    fragment=new MainFragment();
                     break;
             }
+            transaction.replace(R.id.mian_relativeLayout, fragment);
+            transaction.commit(); // 提交创建Fragment请求
         }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //无title
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        //全屏
+        getWindow().setFlags(WindowManager.LayoutParams. FLAG_FULLSCREEN ,
+                WindowManager.LayoutParams. FLAG_FULLSCREEN);
         setContentView(R.layout.activity_main);
         initView();
         //检测APP有没有SD卡的读写权限
         SD_Permission.verifyStoragePermissions(this);
+        //获取上次退出前的状态
+        getstate();
         //展示本机IP
         ShowIP();
         //开启Socket服务器
@@ -85,6 +108,16 @@ public class MainActivity extends AppCompatActivity {
 //        };
 //        timer.schedule(timerTask, 0, 5000);
 //        Con();
+    }
+
+    private void getstate() {
+        SharedPreferences SP=getSharedPreferences("Save",Context.MODE_PRIVATE);
+        int atate=SP.getInt("Type",0);
+        if (atate!=0){
+            Message message=Message.obtain();
+            message.what=atate;
+            handler.sendMessage(message);
+        }
     }
 
     private void ShowIP() {
@@ -142,8 +175,6 @@ public class MainActivity extends AppCompatActivity {
 //    }
 
     private void initView() {
-        btn_accept = findViewById(R.id.btn_accept);
-        et_ip = findViewById(R.id.et_ip);
         tv_IP = findViewById(R.id.tv_IP);
 //        btn_accept.setOnClickListener(this);
     }

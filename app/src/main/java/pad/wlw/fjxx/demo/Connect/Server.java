@@ -37,7 +37,7 @@ public class Server {
             server = new ServerSocket(8899);
             while (true) {
                 Socket socket = server.accept();
-                Log.i("Client connection", new Date().toString());
+                Log.d("Client connection", new Date().toString());
                 socket.setKeepAlive(true);
                 Connect(socket);
             }
@@ -49,12 +49,45 @@ public class Server {
     private void Connect(Socket socket) {
         DataInputStream din = null;
         int fileType = -1;
+        int delType = -1;
         try {
             din = new DataInputStream(new BufferedInputStream(
                     socket.getInputStream()));
             fileType = din.readInt();
             if (fileType == 3) {
                 Web(din);
+            } else if (fileType == 4) {
+                delType = din.readInt();
+                SendDelMSG(delType);
+                final int finalDelType = delType;
+                new Thread() {
+                    @Override
+                    public void run() {
+                        try {
+                            sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        switch (finalDelType) {
+                            case 1:
+                            case 2:
+                                DelDir(finalDelType == 1 ? "Pictures" : "Movies");
+                                break;
+                            case 3:
+                                editor.remove("URL");
+                                editor.remove("Type").commit();
+                                break;
+                            case 4:
+                                DelDir("Pictures");
+                                DelDir("Movies");
+                                editor.remove("URL");
+                                editor.remove("Type").commit();
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }.start();
             } else {
                 SD_Path = Environment.getExternalStorageDirectory().toString();
                 path = SD_Path + "/FJXX/" + (fileType == 1 ? "Pictures" : "Movies") + "/";
@@ -98,13 +131,32 @@ public class Server {
         }
     }
 
+    private void DelDir(String dirName) {
+        SD_Path = Environment.getExternalStorageDirectory().toString();
+        path = SD_Path + "/FJXX/" + (dirName) + "/";
+        File[] files = new File(path).listFiles();
+        Log.d("文件列表", files.toString());
+        for (File file : files) {
+            if (file.exists()) {
+                file.delete();
+            }
+        }
+    }
+
     //保存成功之后保存状态以及告诉主界面保存完成
     private void SaveAndSendMsg(int fileType) {
         editor.putInt("Type", fileType).commit();
         Message msg = new Message();
         msg.what = fileType;
         handler.handleMessage(msg);
-        Log.i("Save successfully", "Type:" + fileType);
+        Log.d("Save successfully", "Type:" + fileType);
+    }
+
+    private void SendDelMSG(int delType) {
+        Message msg = new Message();
+        msg.what = 4;
+        msg.obj = String.valueOf(delType);
+        handler.handleMessage(msg);
     }
 
     class mFileInfo {
@@ -151,7 +203,7 @@ public class Server {
                     return;
                 }
                 System.out.println("readlen" + bufferedLen);
-                Log.i("正在接收中：", String.valueOf(totalWriteLens / totalSize));
+                Log.d("正在接收中：", String.valueOf(totalWriteLens / totalSize));
                 // 如果已写入文件的字节数加上缓存区中的字节数已大于文件的大小，只写入缓存区的部分内容。
                 if (writeLens + bufferedLen >= fileinfos[i].mFileSize) {
                     leftLen = (int) (writeLens + bufferedLen - fileinfos[i].mFileSize);
@@ -174,7 +226,7 @@ public class Server {
                     leftLen = 0;
                 }
             }
-            Log.i("文件接收完毕", "共接收了" + fileNum + "个文件");
+            Log.d("文件接收完毕", "共接收了" + fileNum + "个文件");
             fout.close();
         }
     }
@@ -183,6 +235,6 @@ public class Server {
     private void Web(DataInputStream din) throws IOException {
         String url = din.readUTF();
         editor.putString("URL", url).commit();
-        Log.i("当前播放的网页是：", SP.getString("URL", "无"));
+        Log.d("当前播放的网页是：", SP.getString("URL", "无"));
     }
 }

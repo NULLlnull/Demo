@@ -1,4 +1,4 @@
-package com.example.hmy.videodemo.view;
+package pad.wlw.fjxx.demo.view;
 
 import android.content.Context;
 import android.util.AttributeSet;

@@ -1,32 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mian_relativeLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".MainActivity">
-
-
-    <EditText
-        android:id="@+id/et_ip"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:hint="IP"
-        android:text="@string/ip_pc" />
-
-    <Button
-        android:id="@+id/btn_accept"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="接收文件" />
+    tools:context=".MainActivity">`
 
     <TextView
+        android:layout_alignParentBottom="true"
         android:id="@+id/tv_IP"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:gravity="center"
         android:text="IP"
-        android:textSize="30sp" />
+        android:textSize="20sp" />
 
-</LinearLayout>
+</RelativeLayout>
